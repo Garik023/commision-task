@@ -9,7 +9,7 @@
 composer install
 ```
 
-###Configuration
+### Configuration
 
 ```
 1. In app.php change token for [https://api.exchangeratesapi.io]((https://api.exchangeratesapi.io/latest)) API token
