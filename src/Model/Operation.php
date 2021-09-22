@@ -5,24 +5,26 @@ declare(strict_types=1);
 namespace CommissionTask\Model;
 
 use DateTime;
-use Exception;
-use CommissionTask\Contract\Entity\Operation as OperationEntityContract;
-use CommissionTask\Exception\Validation\{
-    Operation\InvalidDate as InvalidOperationDateException,
-    Operation\InvalidType as InvalidOperationTypeException,
-    ValidationException
+use CommissionTask\Instance\{
+    FeePolicy as FeePolicyInstance,
+    Config as ConfigInstance,
+    Validator as ValidatorInstance
 };
-use CommissionTask\Factory\{
-    Service\FeePolicy as FeePolicyFactory,
-    Service\Config as ConfigFactory,
-    Validator\Operation as OperationValidatorFactory
-};
+use CommissionTask\Validation\AppException;
 
 /**
  * Describes Operation entity.
  */
-class Operation implements OperationEntityContract
+class Operation
 {
+    const TYPE_DEPOSIT = 'deposit';
+    const TYPE_WITHDRAW = 'withdraw';
+
+    const OPERATION_TYPES = [
+        self::TYPE_DEPOSIT,
+        self::TYPE_WITHDRAW,
+    ];
+
     /** @var DateTime */
     protected $date;
 
@@ -37,7 +39,6 @@ class Operation implements OperationEntityContract
 
     /***
      * Builds new Operation instance from raw string data.
-     * @throws ValidationException|Exception
      */
     public function __construct(
         string $dateStr,
@@ -60,7 +61,7 @@ class Operation implements OperationEntityContract
         // get commission fee policy name from configuration for the operation
         $policyName = $this->getFeePolicyName();
         // get commission fee policy instance
-        $commissionFeePolicy = FeePolicyFactory::getInstanceByName($policyName);
+        $commissionFeePolicy = FeePolicyInstance::getInstanceByName($policyName);
 
         // calculate commission fee for the operation
         return $commissionFeePolicy->getFeeForOperation($this);
@@ -69,12 +70,12 @@ class Operation implements OperationEntityContract
     /**
      * Converts given date to DateTime stores it to the class property
      *
-     * @throws InvalidOperationDateException|Exception
+     * @throws AppException
      */
     public function setDate(string $date)
     {
-        if (!OperationValidatorFactory::getInstance()->isDateValid($date)) {
-            throw new InvalidOperationDateException($date);
+        if (!ValidatorInstance::getInstance()->isDateValid($date)) {
+            throw new AppException(AppException::OPERATION_DATE_INVALID, $date);
         }
 
         $this->date = new DateTime($date);
@@ -83,12 +84,13 @@ class Operation implements OperationEntityContract
     /**
      * Sets operation type or throws an exception if passed type is not valid.
      *
-     * @throws InvalidOperationTypeException
+     *
+     * @throws AppException
      */
     public function setType(string $type)
     {
-        if (!OperationValidatorFactory::getInstance()->isOperationTypeValid($type)) {
-            throw new InvalidOperationTypeException($type);
+        if (!ValidatorInstance::getInstance()->isOperationTypeValid($type)) {
+            throw new AppException(AppException::OPERATION_TYPE_INVALID, $type);
         }
 
         $this->type = $type;
@@ -137,7 +139,8 @@ class Operation implements OperationEntityContract
     {
         $operationType = $this->getType();
         $operationUserType = $this->user->getType();
-        return ConfigFactory::getInstance()
-            ->get("fee_operations.operation_type.{$operationType}.user_type.{$operationUserType}.policy");
+        $feeOperationsConfig = "fee_operations.operation_type.{$operationType}.user_type.{$operationUserType}.policy";
+        return ConfigInstance::getInstance()
+            ->get($feeOperationsConfig);
     }
 }

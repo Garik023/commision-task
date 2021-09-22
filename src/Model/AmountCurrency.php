@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace CommissionTask\Model;
 
-use CommissionTask\Exception\Validation\Amount\InvalidNumber as InvalidAmountNumberException;
-use CommissionTask\Exception\Validation\Currency\InvalidCode as InvalidCurrencyCodeException;
-use CommissionTask\Factory\Validator\Operation as OperationValidatorFactory;
+use CommissionTask\Validation\AppException;
+use CommissionTask\Instance\Validator as ValidatorInstance;
 
 /**
  * Class AmountCurrency.
@@ -14,6 +13,16 @@ use CommissionTask\Factory\Validator\Operation as OperationValidatorFactory;
  */
 class AmountCurrency
 {
+    const CURRENCY_EUR = 'eur';
+    const CURRENCY_USD = 'usd';
+    const CURRENCY_JPY = 'jpy';
+
+    const SUPPORTED_CURRENCIES = [
+        self::CURRENCY_EUR,
+        self::CURRENCY_USD,
+        self::CURRENCY_JPY,
+    ];
+
     /**
      * Operation amount.
      *
@@ -48,26 +57,27 @@ class AmountCurrency
     }
 
     /**
-     * @throws InvalidAmountNumberException
+     *
+     * @throws AppException
      */
     public function setAmount(string $amount)
     {
-        if (!OperationValidatorFactory::getInstance()->isAmountValid($amount)) {
-            throw new InvalidAmountNumberException($amount);
+        if (!ValidatorInstance::getInstance()->isAmountValid($amount)) {
+            throw new AppException(AppException::AMOUNT_NUMBER_INVALID, $amount);
         }
-
         $this->amount = $amount;
     }
 
     /**
-     * @throws InvalidCurrencyCodeException
+     *
+     * @throws AppException
      */
     public function setCurrency(string $currencyCode)
     {
         $currencyCode = strtolower($currencyCode);
 
-        if (!OperationValidatorFactory::getInstance()->isCurrencyCodeValid($currencyCode)) {
-            throw new InvalidCurrencyCodeException($currencyCode);
+        if (!ValidatorInstance::getInstance()->isCurrencyCodeValid($currencyCode)) {
+            throw new AppException(AppException::CURRENCY_INVALID, $currencyCode);
         }
 
         $this->currency = $currencyCode;

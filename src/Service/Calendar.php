@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace CommissionTask\Service;
 
-use CommissionTask\Contract\Service\Calendar as CalendarServiceContract;
+use CommissionTask\Factory\Calendar as CalendarServiceFactory;
 use DateTime;
 
 /**
  * Class Calendar.
  * Implements Calendar interface with built-in DateTime PHP components.
  */
-class Calendar implements CalendarServiceContract
+class Calendar implements CalendarServiceFactory
 {
     const MONDAY_NUM = 1;
 
     /**
-     * Date format supported by the App.
+     * Date format from app configs.
      *
      * @var string
      */
-    protected $supportedDateFormat;
+    protected string $supportedDateFormat;
 
     public function __construct(string $supportedDateFormat)
     {
@@ -35,7 +35,7 @@ class Calendar implements CalendarServiceContract
     /** {@inheritdoc} */
     public function isMonday(string $date): bool
     {
-        $dateTime = $this->convertToDateTimeInstance($date);
+        $dateTime = $this->formatDate($date);
         $dateDayNum = (int) $dateTime->format('N');
         return $dateDayNum === static::MONDAY_NUM;
     }
@@ -46,14 +46,14 @@ class Calendar implements CalendarServiceContract
         if ($this->isMonday($date)) {
             return $date;
         }
-        $dateTime = $this->convertToDateTimeInstance($date);
+        $dateTime = $this->formatDate($date);
         return $dateTime->modify('last monday')->format($this->supportedDateFormat);
     }
 
     /**
      * Converts passed date (string representation) to DateTime instance.
      */
-    protected function convertToDateTimeInstance(string $date): DateTime
+    protected function formatDate(string $date): DateTime
     {
         return DateTime::createFromFormat($this->supportedDateFormat, $date);
     }

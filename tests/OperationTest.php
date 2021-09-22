@@ -2,18 +2,17 @@
 
 declare(strict_types=1);
 
-namespace CommissionTask\Tests;
+namespace CommissionTask\Test;
 
 use DateTime;
 use CommissionTask\Model\User;
 use PHPUnit\Framework\TestCase;
 use CommissionTask\Model\Operation;
 use CommissionTask\Model\AmountCurrency;
-use CommissionTask\Contract\Entity\Operation as AbstractOperationEntity;
-use CommissionTask\Contract\Entity\User as AbstractUserEntity;
-use CommissionTask\Contract\Entity\Currency as AbstractCurrencyEntity;
-use CommissionTask\Exception\Validation\Operation\InvalidDate as InvalidOperationDateException;
-use CommissionTask\Exception\Validation\Operation\InvalidType as InvalidOperationTypeException;
+use CommissionTask\Model\User as UserEntity;
+use CommissionTask\Model\AmountCurrency as CurrencyEntity;
+use CommissionTask\Model\Operation as OperationEntity;
+use CommissionTask\Validation\AppException;
 
 class OperationTest extends TestCase
 {
@@ -22,12 +21,12 @@ class OperationTest extends TestCase
 
     protected function setUp()
     {
-        $operationUser = new User('1', AbstractUserEntity::TYPE_PRIVATE);
-        $operationAmountCurrency = new AmountCurrency('1', AbstractCurrencyEntity::CURRENCY_EUR);
+        $operationUser = new User('1', UserEntity::TYPE_PRIVATE);
+        $operationAmountCurrency = new AmountCurrency('1', CurrencyEntity::CURRENCY_EUR);
 
         $this->operation = new Operation(
             '2021-09-21',
-            AbstractOperationEntity::TYPE_WITHDRAW,
+            OperationEntity::TYPE_WITHDRAW,
             $operationUser,
             $operationAmountCurrency
         );
@@ -40,14 +39,14 @@ class OperationTest extends TestCase
 
     public function testGetType()
     {
-        $this->assertEquals(AbstractOperationEntity::TYPE_WITHDRAW, $this->operation->getType());
+        $this->assertEquals(OperationEntity::TYPE_WITHDRAW, $this->operation->getType());
     }
 
     public function testGetUser()
     {
         $this->assertInstanceOf(User::class, $this->operation->getUser());
         $this->assertEquals('1', $this->operation->getUser()->getId());
-        $this->assertEquals(AbstractUserEntity::TYPE_PRIVATE, $this->operation->getUser()->getType());
+        $this->assertEquals(UserEntity::TYPE_PRIVATE, $this->operation->getUser()->getType());
     }
 
     public function testGetAmountCurrency()
@@ -55,7 +54,7 @@ class OperationTest extends TestCase
         $this->assertInstanceOf(AmountCurrency::class, $this->operation->getAmountCurrency());
         $this->assertEquals('1', $this->operation->getAmountCurrency()->getAmount());
         $this->assertEquals(
-            AbstractCurrencyEntity::CURRENCY_EUR,
+            CurrencyEntity::CURRENCY_EUR,
             $this->operation->getAmountCurrency()->getCurrency()
         );
     }
@@ -109,14 +108,14 @@ class OperationTest extends TestCase
     /** @dataProvider dataProviderForValidationErrorOnSetIncorrectDateTest */
     public function testValidationErrorOnSetIncorrectDate(string $newIncorrectDate)
     {
-        $this->expectException(InvalidOperationDateException::class);
+        $this->expectException(AppException::class);
         $this->operation->setDate($newIncorrectDate);
     }
 
     /** @dataProvider dataProviderForValidationErrorOnSetIncorrectTypeTest */
     public function testValidationErrorOnSetIncorrectType(string $newIncorrectType)
     {
-        $this->expectException(InvalidOperationTypeException::class);
+        $this->expectException(AppException::class);
         $this->operation->setType($newIncorrectType);
     }
 
@@ -130,16 +129,16 @@ class OperationTest extends TestCase
     public function dataProviderForSuccessSetTypeTest(): array
     {
         return [
-            'set withdraw operation type' => [AbstractOperationEntity::TYPE_WITHDRAW],
-            'set deposit operation type' => [AbstractOperationEntity::TYPE_DEPOSIT],
+            'set withdraw operation type' => [OperationEntity::TYPE_WITHDRAW],
+            'set deposit operation type' => [OperationEntity::TYPE_DEPOSIT],
         ];
     }
 
     public function dataProviderForSuccessSetUserTest(): array
     {
         return [
-            'set Private User' => [new User('1', AbstractUserEntity::TYPE_PRIVATE)],
-            'set Business User' => [new User('2', AbstractUserEntity::TYPE_BUSINESS)],
+            'set Private User' => [new User('1', UserEntity::TYPE_PRIVATE)],
+            'set Business User' => [new User('2', UserEntity::TYPE_BUSINESS)],
         ];
     }
 
@@ -147,13 +146,13 @@ class OperationTest extends TestCase
     {
         return [
             'set amount and currency in EUR' => [
-                new AmountCurrency('100', AbstractCurrencyEntity::CURRENCY_EUR)
+                new AmountCurrency('100', CurrencyEntity::CURRENCY_EUR)
             ],
             'set amount and currency in USD' => [
-                new AmountCurrency('100', AbstractCurrencyEntity::CURRENCY_USD)
+                new AmountCurrency('100', CurrencyEntity::CURRENCY_USD)
             ],
             'set amount and currency in JPY' => [
-                new AmountCurrency('100', AbstractCurrencyEntity::CURRENCY_JPY)
+                new AmountCurrency('100', CurrencyEntity::CURRENCY_JPY)
             ],
         ];
     }
@@ -163,9 +162,9 @@ class OperationTest extends TestCase
         return [
             'create operation by given data' => [
                 '2021-09-21',
-                AbstractOperationEntity::TYPE_WITHDRAW,
-                new User('1', AbstractUserEntity::TYPE_PRIVATE),
-                new AmountCurrency('200', AbstractCurrencyEntity::CURRENCY_EUR)
+                OperationEntity::TYPE_WITHDRAW,
+                new User('1', UserEntity::TYPE_PRIVATE),
+                new AmountCurrency('200', CurrencyEntity::CURRENCY_EUR)
             ]
         ];
     }

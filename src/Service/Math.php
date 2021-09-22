@@ -4,24 +4,45 @@ declare(strict_types=1);
 
 namespace CommissionTask\Service;
 
+use CommissionTask\Instance\Config as ConfigFactory;
+
 class Math
 {
     private $scale;
 
-    public function __construct(int $scale)
+    public function __construct()
     {
-        $this->scale = $scale;
+        $this->scale = ConfigFactory::getInstance()->get('app.scale');
     }
 
-    public function add(string $leftOperand, string $rightOperand): string
+    public function add($a, $b)
     {
-        return bcadd($leftOperand, $rightOperand, $this->scale);
+        return bcadd(strval($a), strval($b), $this->scale);
+    }
+
+    public function sub($a,  $b)
+    {
+        return bcsub(strval($a), strval($b));
+    }
+
+    public function mul( $a,  $b)
+    {
+        return bcmul(strval($a), strval($b), $this->scale);
+    }
+
+    public function div( $a,  $b)
+    {
+        return bcdiv(strval($a), strval($b), $this->scale);
     }
 
     public function percentage($number, $percent)
     {
-        $value =  $number*$percent/100;
-        return number_format($value, $this->scale, '.', "");
+        return $this->div($this->mul($number, $percent), 100);
+    }
+
+    public function max($a, $b)
+    {
+        return max($this->sub($a, $b), 0);
     }
 
 }

@@ -2,35 +2,49 @@
 
 namespace CommissionTask\Service\FeePolicy;
 
-use CommissionTask\Contract\Service\FeePolicy as FeePolicyContract;
-use CommissionTask\Factory\Repository\Operation as OperationRepositoryFactory;
-use CommissionTask\Factory\Service\Calendar as CalendarServiceFactory;
-use CommissionTask\Factory\Service\Config as ConfigFactory;
+use CommissionTask\Factory\Calendar;
+use CommissionTask\Factory\FeePolicy as FeePolicyFactory;
 use CommissionTask\Model\Operation;
-use CommissionTask\Service\API\RateAPI;
-use CommissionTask\Service\Math;
+use CommissionTask\Instance\{
+    Operation as OperationRepositoryInstance,
+    Calendar as CalendarServiceInstance,
+    Math as MathServiceInstance,
+    RateAPI as RateServiceInstance,
+};
+use CommissionTask\Validation\AppException;
 
-class FeePolicy implements FeePolicyContract
+
+class FeePolicy implements FeePolicyFactory
 {
+    /** @var string */
     private $feePercent;
-    private $freeOfCharge;
-    private $calendarService;
-    private $apiService;
-    private $mathService;
-    private $operationRepository;
 
+    /** @var array */
+    private $freeOfCharge;
+
+    /** @var Calendar */
+    private $calendarService;
+
+    /** @var RateServiceInstance */
+    private $apiService;
+
+    /** @var MathServiceInstance */
+    private $mathService;
+
+    /** @var OperationRepositoryInstance */
+    private $operationRepository;
 
     public function __construct(string $feePercent, array $freeOfCharge)
     {
         $this->feePercent = $feePercent;
         $this->freeOfCharge = $freeOfCharge;
-        $this->calendarService = CalendarServiceFactory::getInstance();
-        $this->operationRepository = OperationRepositoryFactory::getInstance();
-        $this->apiService = RateAPI::getInstance();
-        $this->mathService = new Math(ConfigFactory::getInstance()->get('math.scale'));
+        $this->calendarService = CalendarServiceInstance::getInstance();
+        $this->operationRepository = OperationRepositoryInstance::getInstance();
+        $this->apiService = RateServiceInstance::getInstance();
+        $this->mathService = MathServiceInstance::getInstance();
     }
 
-    public static function getInstance(string $feePercent, array $freeOfCharge): FeePolicyContract
+    public static function getInstance( $feePercent, array $freeOfCharge): FeePolicyFactory
     {
         return new static($feePercent, $freeOfCharge);
     }
@@ -38,13 +52,13 @@ class FeePolicy implements FeePolicyContract
     /**
      * Calculates commission fee for provided operation based on user
      *
+     * @throws AppException
      */
     public function getFeeForOperation(Operation $operation)
     {
         $operationAmount = $operation->getAmountCurrency()->getAmount();
-        $scale = ConfigFactory::getInstance()->get('math.scale');
         if($this->freeOfCharge) {
-            $userOperationHistoryForWeek = $this->getWithdrowOperationsByUserAndWeek($operation);
+            $userOperationHistoryForWeek = $this->getWithdrawOperationsByUserAndWeek($operation);
             if (!$this->isFreeLimitExceeded($userOperationHistoryForWeek)) {
                 $previousTotalEurForWeek = $this->previousTotalEurWithdrawAmountForWeek($userOperationHistoryForWeek);
                 $remainedEurLimit = $this->getRemainedFreeAmount($previousTotalEurForWeek);
@@ -52,7 +66,7 @@ class FeePolicy implements FeePolicyContract
                 if ($remainedLimit > $operationAmount) {
                     return 0.00;
                 }
-                $operationAmount =  $operationAmount-$remainedLimit;
+                $operationAmount =  $this->mathService->sub($operationAmount, $remainedLimit);
             }
         }
         return $this->mathService->percentage($operationAmount, $this->feePercent);
@@ -61,15 +75,11 @@ class FeePolicy implements FeePolicyContract
     /**
      * Returns operations array based on user and weekstart
      */
-    private function getWithdrowOperationsByUserAndWeek(Operation $operation): array
+    private function getWithdrawOperationsByUserAndWeek(Operation $operation): array
     {
-        // operation user
         $user = $operation->getUser();
-        // operation date's string representation
         $date = $operation->getDate()->format($this->calendarService->getSupportedDateFormat());
-        // operation date's week boundaries
         $weekStart = $this->calendarService->getStartDayOfWeekForDate($date);
-        // list of all operations performed by the user on the same week as current operation
         return $this->operationRepository->getUserWithdrawForWeekStart($user, $weekStart);
     }
 
@@ -97,11 +107,11 @@ class FeePolicy implements FeePolicyContract
     }
 
     /**
-     * Returns remained free amount
+     * Returns remained free amount or 0
      */
     private function getRemainedFreeAmount($totalPreviousAmountForWeek)
     {
         $amountLimit = $this->freeOfCharge['amount'];
-        return max($amountLimit-$totalPreviousAmountForWeek, 0);
+        return $this->mathService->max($amountLimit, $totalPreviousAmountForWeek);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-use CommissionTask\Contract\Entity\{User, Operation};
+use CommissionTask\Model\{User, Operation};
 use CommissionTask\Service\FeePolicy\{
     Deposit\DepositFeePolicy,
     Withdraw\BusinessFeePolicy,

@@ -4,22 +4,25 @@ namespace CommissionTask;
 
 require_once 'vendor/autoload.php';
 
-use CommissionTask\Factory\Repository\Operation as OperationRepositoryFactory;
-use CommissionTask\Factory\Service\Input\Parser as FileParser;
-use CommissionTask\Exception\Validation\Input\InvalidArgumentCount as InvalidArgumentCountException;
-use CommissionTask\Exception\Validation\ValidationException;
+use CommissionTask\Validation\AppException;
+use CommissionTask\Instance\{
+    Operation as OperationRepositoryInstance,
+    Parser as FileParser
+};
+use CommissionTask\Validation\ValidationException;
 
 try {
     // check for file existence
     if (empty($argv[1])) {
-        throw new InvalidArgumentCountException('File path has not provided');
+        throw new AppException(AppException::FILE_PATH_NOT_PROVIDED);
     }
     $fileFullPath = realpath($argv[1]);
     $fileParser = FileParser::getInstanceByInput($fileFullPath);
-    $operationRepository = OperationRepositoryFactory::getInstance();
+    $operationRepository = OperationRepositoryInstance::getInstance();
 
     // looping over all operation rows in file
     foreach ($fileParser->operations() as $operation) {
+        /* @var $operation \CommissionTask\Model\Operation */
         echo $operation->getFee() . PHP_EOL;
         // saves operation in memory
         $operationRepository->save($operation);
